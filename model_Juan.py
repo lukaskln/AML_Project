@@ -105,10 +105,10 @@ pipe_pre = Pipeline([
     ('s5', SVR(kernel="rbf"))
 ])
 grid = {  # Took 12 min to do the optimization (4000 options)
-    's4__k': [75], # np.linspace(60, 110, 20, dtype=int),
-    's5__C': [100], # np.linspace(1,200, 50),
-    's5__gamma': ['scale'],
-    's5__epsilon': [2.222],
+    's4__k': [192], # np.linspace(60, 300, 70, dtype=int), # [75], # np.linspace(60, 110, 20, dtype=int),
+    's5__C': [176], #np.linspace(1,200, 50), # [100], # np.linspace(1,200, 50),
+    's5__gamma': ['scale'], # ['scale', 'auto'],
+    's5__epsilon': [0]. # np.linspace(0,5, 10) # [2.222], # np.linspace(0,5, 10)  # np.linspace(0.1, , 5)
 }
 
 tic = time.time()
