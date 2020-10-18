@@ -1,5 +1,5 @@
 # Outlier removal in our pipeline!!
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, QuantileTransformer
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, QuantileTransformer, PowerTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.svm import SVR
 from sklearn.feature_selection import SelectKBest, f_regression
@@ -44,18 +44,17 @@ X, y = outlier_rejection(X, y, nu=0.05)
 pipe_pre = Pipeline([
     ('s1', SimpleImputer(strategy='median')),
     ('s2', QuantileTransformer(output_distribution="normal", random_state=42)),
-    # ('s2', StandardScaler()),
     ('s4', SelectKBest(score_func=f_regression)),
     ('s5', SVR(kernel="rbf"))
 ])
 grid = {  # Took 12 min to do the optimization (4000 options)
-    's4__k': [201], # np.linspace(60, 300, 100, dtype=int), 
-    's5__C': [170], # np.linspace(1,200, 100), 
-    's5__gamma': ['scale'], # ['scale', 'auto'],
-    's5__epsilon': [0] # np.linspace(0,5, 5)   # Any CV I was doing 0, was the value chosen, so I jsut fixed it now to tune the others better. 
+    's4__k': [201], # np.linspace(201, 201, 1, dtype=int),  # np.linspace(60, 300, 100, dtype=int), 
+    's5__C': [61.1], # np.linspace(60,70, 10), 
+    's5__gamma': ['auto'], # ['scale', 'auto'],
+    's5__epsilon': [0],  # np.linspace(0,1, 5)   # Any CV I was doing 0, was the value chosen, so I jsut fixed it now to tune the others better. 
 }
 
-estimator1 = GridSearchCV(pipe_pre, grid, cv=5, n_jobs=16, scoring="r2").fit(X, y)
+estimator1 = GridSearchCV(pipe_pre, grid, cv=5, n_jobs=16, scoring="r2", verbose=2).fit(X, y)
 # %store estimator1
 
 model = estimator1.best_estimator_
@@ -66,9 +65,9 @@ print(0.05, scores.mean(), params)
 
 
 # Save the GridSearch outputs
-logs = estimator1.cv_results_
-df = pd.DataFrame.from_dict(logs)
-df.to_csv(ROOT_PATH + "Logs_Juan_model_tuning.csv", index=False)
+# logs = estimator1.cv_results_
+# df = pd.DataFrame.from_dict(logs)
+# df.to_csv(ROOT_PATH + "Logs_Juan_model_tuning.csv", index=False)
 
 # Time taken to train
 toc = time.time()
@@ -81,28 +80,7 @@ pd.DataFrame(estimator1.best_estimator_.predict(X_test)).to_csv("AML_task1_optim
 
 # Performance:
 # Train: 0.668
-# Test: 0.729
-
-
-# With little CV, tried different values for contamination --> highest CV score for around 0.05!
-# Second step do more detailed param tuning for contamination == 0.05
-    
-# OneClassSVM optimized: 
-# contamination=0.05 0.6290817182051215 {'s4__k': 201, 's5__C': 169.38461538461536, 's5__epsilon': 0.0, 's5__gamma': 'scale'} --> 0.719 on the test data
-# Took 20 min!
-
-# LOF optimized:
-# contamination=0.05 0.05 0.6284209103398984 {'s4__k': 189, 's5__C': 200.0, 's5__epsilon': 0.0, 's5__gamma': 'scale'}
-# 1393.8637602329254  seconds
-
-# IsolationForest:
-# Pretty much has no improvement over no outlier removal --> High-dim issue obvious (too many dimensions for the number of samples used in each tree!)
-
-# OneClassSVM and LOF combined, relatively optimized:
-# contamination=0.05 0.6259241224576669 {'s4__k': 206, 's5__C': 200.0, 's5__epsilon': 0, 's5__gamma': 'scale'}
-# 555.9847500324249  seconds
-
-
+# Test: 0.738
 
 
 
