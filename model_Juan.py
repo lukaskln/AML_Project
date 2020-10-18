@@ -1,20 +1,18 @@
-
-
-from sklearn.svm import OneClassSVM
-from sklearn.model_selection import cross_validate, GridSearchCV, KFold, cross_val_score
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+# Outlier removal in our pipeline!!
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, QuantileTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.svm import SVR
 from sklearn.feature_selection import SelectKBest, f_regression
-from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
-ROOT_PATH = "/home/jupyter/Task 1/"
+from sklearn.svm import OneClassSVM
+from sklearn.model_selection import cross_validate, GridSearchCV, cross_val_score
+import time
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
-import time
 
+ROOT_PATH = "/home/jupyter/Task 1/"
 
 
 def outlier_rejection(X, y, contamination=0.05, nu=0.05, max_features=1.0):
@@ -26,7 +24,6 @@ def outlier_rejection(X, y, contamination=0.05, nu=0.05, max_features=1.0):
 
 
 tic = time.time()
-# Get the raw data
 X = pd.read_csv(ROOT_PATH + 'X_train.csv').drop("id", axis=1)
 y = pd.read_csv(ROOT_PATH + 'y_train.csv').drop("id", axis=1)["y"]
 
@@ -46,36 +43,44 @@ X, y = outlier_rejection(X, y, nu=0.05)
 
 pipe_pre = Pipeline([
     ('s1', SimpleImputer(strategy='median')),
-    ('s2', StandardScaler()),
+    ('s2', QuantileTransformer(output_distribution="normal", random_state=42)),
+    # ('s2', StandardScaler()),
     ('s4', SelectKBest(score_func=f_regression)),
     ('s5', SVR(kernel="rbf"))
 ])
 grid = {  # Took 12 min to do the optimization (4000 options)
     's4__k': [201], # np.linspace(60, 300, 100, dtype=int), 
-    's5__C': [170], #np.linspace(1,200, 100), 
+    's5__C': [170], # np.linspace(1,200, 100), 
     's5__gamma': ['scale'], # ['scale', 'auto'],
     's5__epsilon': [0] # np.linspace(0,5, 5)   # Any CV I was doing 0, was the value chosen, so I jsut fixed it now to tune the others better. 
 }
 
 estimator1 = GridSearchCV(pipe_pre, grid, cv=5, n_jobs=16, scoring="r2").fit(X, y)
+# %store estimator1
+
 model = estimator1.best_estimator_
 params = estimator1.best_params_
 scores = cross_val_score(model, X, y, cv=5, n_jobs=16, scoring="r2")
 scores = scores.flatten()
-    
-
-# %store estimator1
 print(0.05, scores.mean(), params)
+
+
+# Save the GridSearch outputs
+logs = estimator1.cv_results_
+df = pd.DataFrame.from_dict(logs)
+df.to_csv(ROOT_PATH + "Logs_Juan_model_tuning.csv", index=False)
+
+# Time taken to train
 toc = time.time()
 print(toc-tic, " seconds")
 
-
+# Run the precition on the test data
 X_test = pd.read_csv(ROOT_PATH + "X_test.csv").drop("id", axis=1)
 X_test= X_test.drop(const_features, axis=1)
 pd.DataFrame(estimator1.best_estimator_.predict(X_test)).to_csv("AML_task1_optimized_Juan_sol.csv", index_label='id', header=['y'])
 
 # Performance:
-# Train: 0.642
+# Train: 0.668
 # Test: 0.729
 
 
