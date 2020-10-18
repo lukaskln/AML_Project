@@ -2,7 +2,7 @@
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, QuantileTransformer, PowerTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.svm import SVR
-from sklearn.feature_selection import SelectKBest, f_regression
+from sklearn.feature_selection import SelectKBest, f_regression, VarianceThreshold
 from sklearn.pipeline import Pipeline
 from sklearn.svm import OneClassSVM
 from sklearn.model_selection import cross_validate, GridSearchCV, cross_val_score
@@ -40,17 +40,17 @@ X = imp.fit_transform(X)
 # Nu == 0.05, was picked based on CV scores on the train data (for each nu value I did param tuning of the SVR model)
 X, y = outlier_rejection(X, y, nu=0.05)
 
-
 pipe_pre = Pipeline([
     ('s1', SimpleImputer(strategy='median')),
-    ('s2', QuantileTransformer(output_distribution="normal", random_state=42)),
+    ('s2', VarianceThreshold()),
+    ('s3', QuantileTransformer(output_distribution="normal", random_state=42)),
     ('s4', SelectKBest(score_func=f_regression)),
     ('s5', SVR(kernel="rbf"))
 ])
 grid = {  # Took 12 min to do the optimization (4000 options)
     's4__k': [201], # np.linspace(201, 201, 1, dtype=int),  # np.linspace(60, 300, 100, dtype=int), 
     's5__C': [61.1], # np.linspace(60,70, 10), 
-    's5__gamma': ['auto'], # ['scale', 'auto'],
+    's5__gamma': ['auto'], # np.linspace(0,0.05, 250), # ['auto'], # ['scale', 'auto'],
     's5__epsilon': [0],  # np.linspace(0,1, 5)   # Any CV I was doing 0, was the value chosen, so I jsut fixed it now to tune the others better. 
 }
 
@@ -81,6 +81,7 @@ pd.DataFrame(estimator1.best_estimator_.predict(X_test)).to_csv("AML_task1_optim
 # Performance:
 # Train: 0.668
 # Test: 0.738
+
 
 
 
